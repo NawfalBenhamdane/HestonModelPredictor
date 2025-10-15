@@ -100,9 +100,9 @@ $$
 - **Lₚᵣᵢ𝒸ₑ**: Relative error between simulated and observed prices  
 - **Lᵥₒₗ**: Relative error between simulated and observed volatility  
 - **L_feller**: Penalty enforcing the Feller condition  
-  $$
-  2\kappa\theta > \sigma_v^2
-  $$  
+$$
+2\kappa\theta > \sigma_v^2
+$$  
 - **L_reg**: L2 regularization on the predicted parameters  
 
 ### Key Hyperparameters
