@@ -1,146 +1,149 @@
 # DeepHeston  
-### Estimation neuronale des paramètres du modèle stochastique de Heston
+### Neural Estimation of the Heston Stochastic Volatility Model Parameters
 
-**Auteur :** Nawfal Benhamdane  
+**Author:** Nawfal Benhamdane  
 **Machine Learning & AI Student**  
 📧 _[nawfal.benhamdane@student-cs.fr]_  
 🌐 [LinkedIn](https://linkedin.com/in/nawfal-benhamdane-6298b1285//) | [GitHub](https://github.com/NawfalBenhamdane)
 
 ---
 
-## Description du projet
+## Project Overview
 
-**DeepHeston** est un projet de recherche en **machine learning appliqué à la finance quantitative**.  
-Il vise à estimer les **paramètres du modèle stochastique de Heston** à l’aide d’une architecture **neuronale profonde**, combinant **réseaux LSTM bidirectionnels** et **mécanismes d’attention multi-têtes**.
+**DeepHeston** is a research project in **machine learning applied to quantitative finance**.  
+It aims to estimate the **parameters of the Heston stochastic volatility model** using a **deep neural network** architecture combining **bidirectional LSTM networks** and a **multi-head attention mechanism**.
 
-Le modèle apprend à calibrer les paramètres latents du modèle de Heston directement à partir de séries temporelles de données financières (prix, volatilité, rendements), sans supervision explicite.
-
----
-
-## Objectif
-
-L’objectif principal est de **remplacer la calibration numérique classique** (souvent instable et coûteuse) par une **calibration neuronale différentiable** :
-
-> Prédire les paramètres latents *(κ, θ, σᵥ, ρ, µ)* du modèle de Heston à partir d’une séquence temporelle d’observations de marché.
-
-Ces paramètres permettent ensuite de **simuler la dynamique du marché** (prix et volatilité) de manière réaliste.
+The model learns to calibrate the latent parameters of the Heston model directly from financial time-series data (prices, volatility, and returns) without explicit supervision.
 
 ---
 
-## Le modèle de Heston
+## Objective
 
-Le modèle de Heston (1993) décrit l’évolution conjointe du prix d’un actif *(Sₜ)* et de sa variance instantanée *(vₜ)* via le système d’équations stochastiques :
+The main objective is to **replace classical numerical calibration methods** (which are often unstable and computationally expensive) with a **differentiable neural calibration** approach.
 
-```math
-egin{cases}
-dS_t = \mu S_t \, dt + \sqrt{v_t} \, S_t \, dW_t^{(1)} \\
-dv_t = \kappa (	heta - v_t) \, dt + \sigma_v \sqrt{v_t} \, dW_t^{(2)}
-\end{cases}
-```
+> Predict the latent parameters *(κ, θ, σᵥ, ρ, µ)* of the Heston model from historical financial time-series.
 
-avec :
-
-```math
-E[dW_t^{(1)} dW_t^{(2)}] = ho \, dt
-```
-
-Le modèle capture la **volatilité stochastique**, la **corrélation prix-volatilité** (effet levier) et reproduit le **smile de volatilité** observé sur les marchés.
+These parameters can then be used to **simulate realistic market dynamics** for pricing, forecasting, or stress testing.
 
 ---
 
-## Données utilisées
+## The Heston Model
 
-- **Source :** [Yahoo Finance via yFinance](https://pypi.org/project/yfinance/)  
-- **Actif étudié :** Indice S&P 500 (^GSPC)  
-- **Période couverte :** 1928 → 2025  
-- **Fréquence :** Journalière (jours ouvrés)
+The Heston model (1993) describes the joint evolution of an asset price *(Sₜ)* and its instantaneous variance *(vₜ)* through the following stochastic differential equations:
 
-### Variables utilisées
-- `Close` : Prix de clôture ajusté  
-- `Volatility` : Volatilité historique ou implicite (via VIX)  
-- `Returns` : Rendement log-transformé  
+$$
+\begin{aligned}
+dS_t &= \mu S_t \, dt + \sqrt{v_t} \, S_t \, dW_t^{(1)} \\
+dv_t &= \kappa (\theta - v_t) \, dt + \sigma_v \sqrt{v_t} \, dW_t^{(2)}
+\end{aligned}
+$$
 
-Prétraitement :
-- Suppression des valeurs manquantes  
-- Normalisation (centrage-réduction)  
-- Fenêtrage temporel sur 30 jours glissants  
+with
 
----
+$$
+E[dW_t^{(1)} dW_t^{(2)}] = \rho \, dt
+$$
 
-## Architecture du modèle
-
-L’architecture suit une logique **Encoder–Decoder** :
-
-1. **Encodeur temporel**  
-   - Trois couches **LSTM bidirectionnelles**  
-   - Extraction du contexte passé/futur des séquences financières  
-
-2. **Mécanisme d’attention multi-têtes**  
-   - Pondération dynamique des jours les plus informatifs  
-   - Capture des ruptures de tendance et régimes de volatilité  
-
-3. **Pooling temporel pondéré**  
-   - Accent sur les observations récentes  
-
-4. **Prédicteur dense (MLP)**  
-   - Sortie : les 5 paramètres du modèle de Heston  
-   - Contraintes physiques assurées via fonctions `softplus` et `tanh`  
+The model captures **stochastic volatility**, **price-volatility correlation** (leverage effect), and reproduces the **volatility smile** observed in financial markets.
 
 ---
 
-## Fonction de perte et entraînement
+## Dataset
 
-La fonction de perte totale combine plusieurs composantes :
+- **Source:** [Yahoo Finance via yFinance](https://pypi.org/project/yfinance/)  
+- **Asset studied:** S&P 500 Index (^GSPC)  
+- **Time span:** 1928 → 2025  
+- **Frequency:** Daily (trading days only)
 
-```math
-L_{total} = L_{prix} + L_{vol} + \lambda_{feller} L_{feller} + \lambda_{reg} L_{reg}
-```
+### Features
+- `Close`: Adjusted closing price  
+- `Volatility`: Historical or implied volatility (via VIX)  
+- `Returns`: Log-transformed daily returns  
 
-- **Lprix** : Erreur sur le prix simulé  
-- **Lvol** : Erreur sur la variance simulée  
-- **Lfeller** : Pénalité sur la condition de Feller  
-  ```math
-  2\kappa	heta > \sigma_v^2
-  ```  
-- **Lreg** : Régularisation L2  
+**Preprocessing:**
+- Removed missing values (due to rolling window)  
+- Chronological sorting and index reset  
+- Standardization (z-score normalization)  
+- 30-day rolling input windows  
 
-### Hyperparamètres clés
-| Paramètre | Valeur |
+---
+
+## Model Architecture
+
+The architecture follows an **Encoder–Decoder** structure:
+
+1. **Temporal Encoder**  
+   - Three stacked **bidirectional LSTM** layers  
+   - Captures long-term temporal dependencies  
+
+2. **Multi-Head Attention Module**  
+   - Dynamically weights important time steps  
+   - Detects volatility regimes and trend shifts  
+
+3. **Weighted Temporal Pooling**  
+   - Aggregates recent time information with increasing temporal weights  
+
+4. **Dense Prediction Head (MLP)**  
+   - Outputs the five Heston parameters  
+   - Uses `softplus` and `tanh` to enforce physical constraints  
+
+---
+
+## Loss Function & Training
+
+The total loss combines several components:
+
+$$
+L_{total} = L_{price} + L_{vol} + \lambda_{feller} L_{feller} + \lambda_{reg} L_{reg}
+$$
+
+- **Lₚᵣᵢ𝒸ₑ**: Relative error between simulated and observed prices  
+- **Lᵥₒₗ**: Relative error between simulated and observed volatility  
+- **L_feller**: Penalty enforcing the Feller condition  
+  $$
+  2\kappa\theta > \sigma_v^2
+  $$  
+- **L_reg**: L2 regularization on the predicted parameters  
+
+### Key Hyperparameters
+| Parameter | Value |
 |------------|--------|
-| Longueur de séquence | 30 jours |
-| Taille cachée (LSTM) | 256 |
-| Nombre de têtes d’attention | 8 |
-| Optimiseur | AdamW |
-| Taux d’apprentissage | 1e-3 |
+| Sequence length | 30 days |
+| LSTM hidden size | 256 |
+| Attention heads | 8 |
+| Optimizer | AdamW |
+| Learning rate | 1e-3 |
 | λ_feller | 0.1 |
 | λ_reg | 0.001 |
 
 ---
 
-## Résultats expérimentaux
+## Experimental Results
 
-### Qualité des prédictions
-Le modèle reproduit fidèlement la dynamique réelle du marché à court terme, tant sur les **prix** que sur la **volatilité**.
+### Prediction Quality
+The model accurately reproduces short-term market dynamics for both **price** and **volatility**, showing strong coherence between simulated and observed data.
 
-### Distribution des paramètres estimés
-| Paramètre | Intervalle typique | Interprétation |
-|------------|--------------------|----------------|
-| κ | [0.5, 4.0] | Retour à la moyenne modéré à fort |
-| θ | [0.02, 0.12] | Variance cible réaliste |
-| σᵥ | [0.1, 0.7] | Volatilité de la variance maîtrisée |
-| ρ | [-0.99, -0.2] | Effet levier négatif |
-| µ | ≈ 0.02 | Croissance moyenne annuelle |
+### Parameter Distribution
+| Parameter | Typical Range | Interpretation |
+|------------|----------------|----------------|
+| κ | [0.5, 4.0] | Mean-reversion speed |
+| θ | [0.02, 0.12] | Long-term variance level |
+| σᵥ | [0.1, 0.7] | Volatility of variance |
+| ρ | [-0.99, -0.2] | Negative leverage effect |
+| µ | ≈ 0.02 | Average annual growth rate |
 
-### Simulation libre
-En mode **prédictif autonome**, le modèle peut simuler la trajectoire future du prix et de la variance sur 30 à 200 jours, générant des scénarios réalistes et cohérents avec la structure des marchés.
+### Free Simulation
+When run in **autonomous predictive mode**, the model can simulate realistic market trajectories over 30–200 days, maintaining plausible variance dynamics and price evolution.
 
 ---
 
 ## Discussion
 
-L’approche **DeepHeston** démontre la **faisabilité d’une calibration neuronale** stable et cohérente du modèle de Heston, contournant les limites des méthodes numériques classiques.  
-Elle ouvre la voie à des applications en :
-- Pricing d’options  
+**DeepHeston** demonstrates the feasibility of a **neural calibration framework** for stochastic volatility models.  
+It offers a stable, differentiable, and theoretically consistent alternative to traditional numerical methods.
+
+Potential applications include:
+- Option pricing  
 - Stress testing  
-- Génération de scénarios de marché  
-- Prévision probabiliste de la volatilité  
+- Scenario generation  
+- Probabilistic volatility forecasting  
